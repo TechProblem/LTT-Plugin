@@ -68,9 +68,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>$(ProjectDir)LTT.def</ModuleDefinitionFile>
     </Link>
-    <PostBuildEvent>
-      <Command>"$(ProjectDir)CopyWithRetry.cmd" "$(TargetPath)" "$(SolutionDir)Long-Time-Tutorial\Assets\Plugins\x86_64"</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LTT.h" />

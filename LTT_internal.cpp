@@ -27,7 +27,7 @@ static std::string GetModuleDirectory()
 static std::string MakeTextPath()
 {
     auto dir = GetModuleDirectory();
-    std::string file = dir + "\\Text.txt";
+    std::string file = dir + "\\LTTTime.txt";
     return file;
 }
 
