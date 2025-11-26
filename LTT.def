@@ -1,0 +1,5 @@
+LIBRARY "LTT"
+EXPORTS
+    FileHandler    @1
+    LTTWrite       @2
+    LTT_main       @3
