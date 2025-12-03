@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="LTT.h" />
-    <ClInclude Include="pch.h" />
+    <ClInclude Include="LTT_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files" />
@@ -10,6 +10,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LTT.cpp" />
-    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="LTT_exports.cpp" />
+    <ClCompile Include="LTT_internal.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Scripts\LTTNative.cs" />
+    <None Include="CopyWithRetry.cmd" />
+    <None Include="LTT.def" />
+    <None Include="Assets\Scripts\LTTPlugin.cs" />
   </ItemGroup>
 </Project>

@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\LTTNative.cs" />
+    <None Include="Assets\Scripts\LTTPlugin.cs" />
     <None Include="CopyWithRetry.cmd" />
     <None Include="LTT.def" />
   </ItemGroup>
