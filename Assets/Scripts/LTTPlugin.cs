@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 public class LTTPlugin : MonoBehaviour
 {
 
-    // Use persistentDataPath so it works in Editor and builds
+    
     public string directoryPath;
     public string path;
 
@@ -39,7 +39,8 @@ public class LTTPlugin : MonoBehaviour
 
             // ensure file exists in native code
             LTTNative.EnsureFile(path); // calls FileHandlerWithPath
-           // LTT_main();
+            LTTRead();
+            LTT_main();
         }
         catch (DllNotFoundException e)
         {
@@ -52,7 +53,7 @@ public class LTTPlugin : MonoBehaviour
         try
         {
             LTTNative.WriteTime(path);
-            //LTTWrite();
+            LTTWrite();
             Debug.Log("Application is quitting, time written to file.");
         }
         catch (DllNotFoundException e)

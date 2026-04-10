@@ -8,6 +8,7 @@ extern "C" {
 	__declspec(dllexport) void __cdecl FileHandler();
 	__declspec(dllexport) void __cdecl LTT_main();
 	__declspec(dllexport) void __cdecl LTTWrite();
+	__declspec(dllexport) void __cdecl LTTRead();
 
 #ifdef __cplusplus
 }

@@ -4,8 +4,9 @@
 #include <filesystem>
 #include <fstream>
 #include <ctime>
+#include <iostream>
 
-// --- original content preserved ---
+// --- original content ---
 static std::string GetModuleDirectory()
 {
     char path[MAX_PATH] = { 0 };
@@ -70,8 +71,41 @@ void FileHandlerImpl()
 
 void LTTMainImpl()
 {
+    LTTReadImpl();
     DebugLog("LTT_main called (impl).");
     FileHandlerImpl();
+}
+
+void LTTReadImpl()
+{
+    try
+    {
+        std::string path = MakeTextPath();
+        if (std::filesystem::exists(path))
+        {
+            std::ifstream ifs(path);
+            if (ifs)
+            {
+                std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+                
+                ifs.close();
+                DebugLog((std::string("Read from file: ") + path + "\nContent:\n" + content).c_str());
+                
+            }
+            else
+            {
+                DebugLog((std::string("Failed to open file for reading: ") + path).c_str());
+            }
+        }
+        else
+        {
+            DebugLog((std::string("File does not exist: ") + path).c_str());
+        }
+    }
+    catch (const std::exception& e)
+    {
+        DebugLog((std::string("LTTReadImpl exception: ") + e.what()).c_str());
+    }
 }
 
 void LTTWriteImpl()
@@ -108,6 +142,8 @@ void LTTWriteImpl()
 
 // static config kept inside the plugin
 static LTTConfig g_config;
+
+
 
 // trim helpers
 static inline std::string trim(const std::string& s)
@@ -221,9 +257,7 @@ std::string SerializeLTTConfig()
     return oss.str();
 }
 
-// Append these implementations to LTT_internal.cpp (after g_config definition)
 
-#include <string>
 
 // Thresholds
 int GetThresholdYears()               { return g_config.threshold_years; }

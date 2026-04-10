@@ -6,10 +6,10 @@
 // internal configuration kept inside the plugin
 struct LTTConfig
 {
-    int threshold_years   = 0;
-    int threshold_months  = 0;
-    int threshold_days    = 0;
-    int threshold_hours   = 0;
+    int threshold_years = 0;
+    int threshold_months = 0;
+    int threshold_days = 0;
+    int threshold_hours = 0;
     int threshold_minutes = 0;
     int threshold_seconds = 0;
 
@@ -31,6 +31,7 @@ struct LTTConfig
 void FileHandlerImpl();
 void LTTMainImpl();
 void LTTWriteImpl();
+void LTTReadImpl();
 
 // internal config APIs (C++ use)
 const LTTConfig& GetLTTConfig();
@@ -69,3 +70,7 @@ int GetCustomScriptCount();
 const char* GetCustomScriptAt(int index);
 void AddCustomScript(const char* s);
 void ClearCustomScripts();
+
+// NEW: checking helpers
+// Returns true if the timestamp in the configured path is older than the thresholds
+bool IsFileTimePastThreshold();
