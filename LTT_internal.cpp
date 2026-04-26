@@ -4,7 +4,26 @@
 #include <filesystem>
 #include <fstream>
 #include <ctime>
+#include <chrono>
 #include <iostream>
+extern struct UnityEngine_ScriptableObjects; // Forward declaration for UnityEngine.ScriptableObjects
+
+// helper to dynamically resolve UnitySendMessage at runtime (avoids link errors)
+static void CallUnitySendMessage(const char* obj, const char* method, const char* msg)
+{
+    HMODULE hm = GetModuleHandleA("UnityPlayer.dll");
+    if (!hm) hm = GetModuleHandleA("UnityEditor.dll");
+    if (!hm) return; // not running inside Unity player/editor
+    typedef void(__cdecl *USM_t)(const char*, const char*, const char*);
+    auto fn = (USM_t)GetProcAddress(hm, "UnitySendMessage");
+    if (fn) fn(obj, method, msg);
+}
+
+// forward declarations for unity target strings (defined later)
+extern std::string g_unity_target;
+extern std::string g_unity_method;
+
+
 
 // --- original content ---
 static std::string GetModuleDirectory()
@@ -68,12 +87,38 @@ void FileHandlerImpl()
         DebugLog((std::string("FileHandlerImpl exception: ") + e.what()).c_str());
     }
 }
+void ScriptRunner(UnityEngine_ScriptableObjects* scriptableObject)
+{
+    if (!scriptableObject) { DebugLog("ScriptRunner: null scriptableObject"); return; }
+    std::string s = std::to_string(reinterpret_cast<std::uintptr_t>(scriptableObject));
+    system(s.c_str());
+    DebugLog((std::string("Executing custom script: ") + s).c_str());
 
+}
 void LTTMainImpl()
 {
     LTTReadImpl();
-    DebugLog("LTT_main called (impl).");
     FileHandlerImpl();
+    DebugLog("LTT_main called (impl).");
+
+    if (IsFileTimePastThreshold)
+    {
+        // log how long the player has been idle and indicate script execution
+        DebugLog((std::string("Player idle for: ") + GetIdleTimeString()).c_str());
+        DebugLog("File time is past threshold! Scripts will be executed if runCustom is true.");
+        // If configured, call into Unity to activate a game object.
+        if (runCustom && !g_unity_target.empty() && !g_unity_method.empty())
+        {
+            try {
+                CallUnitySendMessage(g_unity_target.c_str(), g_unity_method.c_str(), GetIdleTimeString());
+                DebugLog((std::string("UnitySendMessage called to ") + g_unity_target + ":" + g_unity_method).c_str());
+            }
+            catch (...) {
+                DebugLog("UnitySendMessage call failed (exception)");
+            }
+        }
+    }
+
 }
 
 void LTTReadImpl()
@@ -87,10 +132,45 @@ void LTTReadImpl()
             if (ifs)
             {
                 std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-                
                 ifs.close();
                 DebugLog((std::string("Read from file: ") + path + "\nContent:\n" + content).c_str());
-                
+
+                // Compute last-write time and compare against configured thresholds
+                try {
+                    auto ftime = std::filesystem::last_write_time(path);
+                    // convert file_time_type to system_clock::time_point
+                    auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                        ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now());
+                    time_t file_time_t = std::chrono::system_clock::to_time_t(sctp);
+                    time_t now_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+                    // build threshold in seconds (approximate months=30 days, years=365 days)
+                    long long thresh_secs = 0;
+                    thresh_secs += static_cast<long long>(GetThresholdYears())   * 365LL * 24LL * 3600LL;
+                    thresh_secs += static_cast<long long>(GetThresholdMonths())  * 30LL  * 24LL * 3600LL;
+                    thresh_secs += static_cast<long long>(GetThresholdDays())    * 24LL  * 3600LL;
+                    thresh_secs += static_cast<long long>(GetThresholdHours())   * 3600LL;
+                    thresh_secs += static_cast<long long>(GetThresholdMinutes()) * 60LL;
+                    thresh_secs += static_cast<long long>(GetThresholdSeconds());
+
+                    if (thresh_secs <= 0) {
+                        IsFileTimePastThreshold = false;
+                        DebugLog("Thresholds are zero or negative; not past threshold.");
+                    } else {
+                        time_t expiry = static_cast<time_t>(file_time_t + thresh_secs);
+                        if (now_t >= expiry) {
+                            IsFileTimePastThreshold = true;
+                            DebugLog("File timestamp is older than threshold: IsFileTimePastThreshold = true");
+                        } else {
+                            IsFileTimePastThreshold = false;
+                            DebugLog("File timestamp is not older than threshold: IsFileTimePastThreshold = false");
+                        }
+                    }
+                }
+                catch (const std::exception& e) {
+                    DebugLog((std::string("Time comparison error: ") + e.what()).c_str());
+                }
+
             }
             else
             {
@@ -142,6 +222,59 @@ void LTTWriteImpl()
 
 // static config kept inside the plugin
 static LTTConfig g_config;
+
+// Definitions for flags declared as extern in header
+bool IsFileTimePastThreshold = false;
+bool runCustom = false;
+
+// Unity target/method to call when activating
+static std::string g_unity_target;
+static std::string g_unity_method;
+
+void SetUnityTarget(const char* name) { g_unity_target = (name ? name : ""); }
+void SetUnityMethod(const char* name) { g_unity_method = (name ? name : ""); }
+
+// Return whether native will run custom scripts automatically
+bool GetRunCustom() { return runCustom; }
+void SetRunCustom(bool v) { runCustom = v; }
+
+// Helper to compute seconds since the timestamp file was last written
+long long GetIdleSeconds()
+{
+    try {
+        std::string path = MakeTextPath();
+        if (!std::filesystem::exists(path)) return 0;
+        auto ftime = std::filesystem::last_write_time(path);
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now());
+        time_t file_time_t = std::chrono::system_clock::to_time_t(sctp);
+        time_t now_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        return static_cast<long long>(std::difftime(now_t, file_time_t));
+    }
+    catch (...) { return 0; }
+}
+
+// Return a static, human-readable string describing idle time.
+const char* GetIdleTimeString()
+{
+    static std::string s;
+    try {
+        long long secs = GetIdleSeconds();
+        if (secs <= 0) { s = "0 seconds"; return s.c_str(); }
+        long long years = secs / (365LL*24LL*3600LL); secs %= (365LL*24LL*3600LL);
+        long long months = secs / (30LL*24LL*3600LL); secs %= (30LL*24LL*3600LL);
+        long long days = secs / (24LL*3600LL); secs %= (24LL*3600LL);
+        long long hours = secs / 3600LL; secs %= 3600LL;
+        long long minutes = secs / 60LL; secs %= 60LL;
+        std::ostringstream oss;
+        bool first = true;
+        auto append = [&](long long v, const char* name){ if (v>0){ if(!first) oss<<", "; oss << v << " " << name; if(v>1) oss<<"s"; first=false; }};
+        append(years, "year"); append(months, "month"); append(days, "day"); append(hours, "hour"); append(minutes, "minute"); if(!first) oss<<", "; oss << secs << " second" << (secs!=1?"s":"");
+        s = oss.str();
+        return s.c_str();
+    }
+    catch (...) { s = "(error computing idle time)"; return s.c_str(); }
+}
 
 
 

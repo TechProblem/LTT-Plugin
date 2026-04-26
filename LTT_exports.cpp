@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <ctime>
+#include <cstdlib>
 struct UnityEngine_ScriptableObjects; // Forward declaration for UnityEngine.ScriptableObjects
 using UnityEngine = struct { using ScriptableObjects = UnityEngine_ScriptableObjects; };
 
@@ -21,6 +22,7 @@ static void LTTActivateCustomScripts(UnityEngine_ScriptableObjects* scriptableOb
     std::string s = std::to_string(reinterpret_cast<std::uintptr_t>(scriptableObject));
     if (scriptableObject == NULL) { DebugLogLocal("LTTActivateCustomScripts: empty arg"); return; }
 	AddCustomScript(s.c_str());
+	ScriptRunner(scriptableObject);
 	DebugLogLocal((std::string("Activated custom script: ") + std::to_string(reinterpret_cast<std::uintptr_t>(scriptableObject))).c_str());
 }
 
@@ -38,7 +40,10 @@ extern "C" __declspec(dllexport) void __cdecl LTTWrite()
 extern "C" __declspec(dllexport) void __cdecl LTT_main(UnityEngine_ScriptableObjects* scriptableObject)
 {
     LTTMainImpl();
-	LTTActivateCustomScripts(scriptableObject);
+    // only activate custom scripts if the flag is set (avoid accidental assignment)
+    if (runCustom) {
+        LTTActivateCustomScripts(scriptableObject);
+    }
 }
 
 extern "C" __declspec(dllexport) void __cdecl LTTRead()
@@ -163,6 +168,17 @@ extern "C" __declspec(dllexport) const char* __cdecl LTT_GetCustomScriptAt(int i
 extern "C" __declspec(dllexport) void __cdecl   LTT_AddCustomScript(const char* s) { AddCustomScript(s); }
 extern "C" __declspec(dllexport) void __cdecl   LTT_ClearCustomScripts() { ClearCustomScripts(); }
 
+// Runtime flags and idle-time exports
+extern "C" __declspec(dllexport) bool __cdecl LTT_GetRunCustom() { return GetRunCustom(); }
+extern "C" __declspec(dllexport) void __cdecl LTT_SetRunCustom(bool v) { SetRunCustom(v); }
+
+extern "C" __declspec(dllexport) long long __cdecl LTT_GetIdleSeconds() { return GetIdleSeconds(); }
+extern "C" __declspec(dllexport) const char* __cdecl LTT_GetIdleTimeString() { return GetIdleTimeString(); }
+
+// Unity activation target
+extern "C" __declspec(dllexport) void __cdecl LTT_SetUnityTarget(const char* name) { SetUnityTarget(name); }
+extern "C" __declspec(dllexport) void __cdecl LTT_SetUnityMethod(const char* name) { SetUnityMethod(name); }
+
 // Safe JSON-taking exports
 
 extern "C" __declspec(dllexport) void __cdecl LTT_AddCustomScriptJson(const char* json)
@@ -227,7 +243,7 @@ extern "C" __declspec(dllexport) bool __cdecl LTT_IsPastThreshold()
 {
     try
     {
-        return IsFileTimePastThreshold();
+        return IsFileTimePastThreshold;
     }
     catch (...)
     {

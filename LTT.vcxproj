@@ -80,6 +80,8 @@
     <ClCompile Include="LTT_internal.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Scripts\LTTActivator.cs" />
+    <None Include="Assets\Scripts\LTTAutoRegister.cs" />
     <None Include="Assets\Scripts\LTTNative.cs" />
     <None Include="Assets\Scripts\LTTPlugin.cs" />
     <None Include="CopyWithRetry.cmd" />

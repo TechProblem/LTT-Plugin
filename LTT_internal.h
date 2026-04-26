@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+struct UnityEngine_ScriptableObjects; // Forward declaration for UnityEngine.ScriptableObjects
 
 // internal configuration kept inside the plugin
 struct LTTConfig
@@ -26,6 +27,9 @@ struct LTTConfig
         custom_scripts.clear();
     }
 };
+
+
+void ScriptRunner(UnityEngine_ScriptableObjects* scriptableObject);
 
 // internal implementation prototypes
 void FileHandlerImpl();
@@ -71,6 +75,21 @@ const char* GetCustomScriptAt(int index);
 void AddCustomScript(const char* s);
 void ClearCustomScripts();
 
+// runtime flags access
+bool GetRunCustom();
+void SetRunCustom(bool v);
+
+// Idle time helpers (seconds since the LTT time file was last written)
+long long GetIdleSeconds();
+// Returns a human-readable duration string (owned by the callee)
+const char* GetIdleTimeString();
+
+// Unity activation target helpers
+void SetUnityTarget(const char* name);
+void SetUnityMethod(const char* name);
+
 // NEW: checking helpers
 // Returns true if the timestamp in the configured path is older than the thresholds
-bool IsFileTimePastThreshold();
+extern bool IsFileTimePastThreshold;
+extern bool runCustom;
+

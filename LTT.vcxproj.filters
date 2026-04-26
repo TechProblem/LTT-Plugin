@@ -18,5 +18,7 @@
     <None Include="CopyWithRetry.cmd" />
     <None Include="LTT.def" />
     <None Include="Assets\Scripts\LTTPlugin.cs" />
+    <None Include="Assets\Scripts\LTTActivator.cs" />
+    <None Include="Assets\Scripts\LTTAutoRegister.cs" />
   </ItemGroup>
 </Project>

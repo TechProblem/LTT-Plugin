@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using UnityEngine;
 
 public static class LTTNative
 {
@@ -61,6 +62,15 @@ public static class LTTNative
     private static extern void LTT_AddCustomScript([MarshalAs(UnmanagedType.LPStr)] string s);
     [DllImport("LTT", CallingConvention = CallingConvention.Cdecl)] private static extern void LTT_ClearCustomScripts();
 
+    // Runtime flags and idle-time helpers
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl)] private static extern bool LTT_GetRunCustom();
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl)] private static extern void LTT_SetRunCustom([MarshalAs(UnmanagedType.I1)] bool v);
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl)] private static extern long LTT_GetIdleSeconds();
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl)] private static extern IntPtr LTT_GetIdleTimeString();
+    // Unity activation helpers
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)] private static extern void LTT_SetUnityTarget([MarshalAs(UnmanagedType.LPStr)] string name);
+    [DllImport("LTT", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)] private static extern void LTT_SetUnityMethod([MarshalAs(UnmanagedType.LPStr)] string name);
+
     // Public-friendly API
     private static string PtrToString(IntPtr p) => p == IntPtr.Zero ? string.Empty : Marshal.PtrToStringAnsi(p);
 
@@ -94,4 +104,20 @@ public static class LTTNative
     }
     public static void AddCustomScript(string s) => LTT_AddCustomScript(s);
     public static void ClearCustomScripts() => LTT_ClearCustomScripts();
+
+    // Expose runCustom and idle-time to managed code
+    public static bool RunCustom { get => LTT_GetRunCustom(); set => LTT_SetRunCustom(value); }
+    public static long IdleSeconds { get => LTT_GetIdleSeconds(); }
+    public static string IdleTimeString { get => PtrToString(LTT_GetIdleTimeString()); }
+
+    // Set the GameObject name and method UnitySendMessage will call
+    public static void SetUnityTarget(string name) => LTT_SetUnityTarget(name);
+    public static void SetUnityMethod(string name) => LTT_SetUnityMethod(name);
+
+    // Developer helper: log idle time to Unity console and indicate whether scripts will run
+    public static void DevLogIdle()
+    {
+        Debug.Log($"LTT DevLog - Player idle for: {IdleTimeString}");
+        Debug.Log($"LTT DevLog - runCustom = {RunCustom}");
+    }
 }
